@@ -36,6 +36,11 @@ def list_projects(cfg: dict) -> list[dict]:
         if cwd in cwd_set:
             cwd_set[cwd]["session_count"] += 1
 
+    # Also include configured project_dirs (even if no JSONL history yet)
+    for d in cfg.get("project_dirs", []):
+        if d and d not in cwd_set and Path(d).is_dir():
+            cwd_set[d] = {"path": d, "session_count": 0}
+
     projects = []
     for cwd, info in cwd_set.items():
         key = cwd
