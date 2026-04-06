@@ -52,14 +52,17 @@ if ! "$PY" -c "import flask" 2>/dev/null; then
     echo "    Done."
 fi
 
-# ========== 5. Config directory ==========
+# ========== 5. Clear stale Python cache ==========
+find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+
+# ========== 6. Config directory ==========
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/claude-manager"
 mkdir -p "$CONFIG_DIR"
 
-# ========== 6. Start tmux server ==========
+# ========== 7. Start tmux server ==========
 tmux start-server 2>/dev/null || true
 
-# ========== 7. Start server ==========
+# ========== 8. Start server ==========
 HOST="${CM_HOST:-0.0.0.0}"
 PORT="${CM_PORT:-5000}"
 
