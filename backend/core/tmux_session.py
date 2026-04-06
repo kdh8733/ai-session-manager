@@ -19,7 +19,7 @@ import time
 from pathlib import Path
 
 from backend.core import session_state
-from backend.utils.platform import config_dir, claude_data_dir, tmux_run, claude_bin_path
+from backend.utils.platform import config_dir, claude_data_dir, tmux_run, claude_bin_path, normalize_path
 
 SESSION_PREFIX = "cm-"
 
@@ -126,6 +126,7 @@ def create_session(
     skip_permissions: bool = True,
 ) -> dict:
     """Create a new tmux session running Claude CLI."""
+    project_dir = normalize_path(project_dir)
     project = _sanitize_name(Path(project_dir).name or "default")
     idx = _next_index(project)
     session_id = f"{SESSION_PREFIX}{project}-{idx}"
