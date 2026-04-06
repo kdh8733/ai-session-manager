@@ -4,6 +4,7 @@ from pathlib import Path
 from flask import Blueprint, jsonify, request, current_app
 
 from backend.core import config as cfg_mod
+from backend.utils.platform import normalize_path
 
 bp = Blueprint("settings", __name__, url_prefix="/api/settings")
 
@@ -29,7 +30,11 @@ def update_settings():
 
     for key in ("project_dirs", "claude_bin", "claude_dir"):
         if key in data:
-            cfg[key] = data[key]
+            if key == "project_dirs":
+                # Convert Windows paths to WSL paths
+                cfg[key] = [normalize_path(d) for d in data[key] if d]
+            else:
+                cfg[key] = data[key]
 
     cfg_mod.save(cfg)
     current_app.config["CM"] = cfg

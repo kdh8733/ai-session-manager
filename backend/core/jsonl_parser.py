@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Iterator
 
 from backend.core import config as cfg_mod
+from backend.utils.platform import normalize_path
 
 
 # ---------------------------------------------------------------------------
@@ -64,7 +65,7 @@ def list_all_sessions(cfg: dict) -> list[dict]:
     """
     claude_dir = Path(cfg.get("claude_dir", Path.home() / ".claude"))
     projects_dir = claude_dir / "projects"
-    project_dirs = [Path(d) for d in cfg.get("project_dirs", [])]
+    project_dirs = [Path(normalize_path(d)) for d in cfg.get("project_dirs", [])]
     hidden = _hidden_sessions()
 
     sessions = []

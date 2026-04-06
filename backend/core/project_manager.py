@@ -11,6 +11,7 @@ from pathlib import Path
 
 from backend.core import config as cfg_mod
 from backend.core import jsonl_parser
+from backend.utils.platform import normalize_path
 
 # Simple in-process cache for git info: {path: (info, expires_at)}
 _git_cache: dict[str, tuple[dict, float]] = {}
@@ -37,9 +38,10 @@ def list_projects(cfg: dict) -> list[dict]:
             cwd_set[cwd]["session_count"] += 1
 
     # Also include configured project_dirs and their subdirectories
-    for d in cfg.get("project_dirs", []):
-        if not d:
+    for raw_d in cfg.get("project_dirs", []):
+        if not raw_d:
             continue
+        d = normalize_path(raw_d)
         dp = Path(d)
         if not dp.is_dir():
             continue

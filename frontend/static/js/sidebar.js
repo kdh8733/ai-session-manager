@@ -83,8 +83,7 @@ const Sidebar = (() => {
           se.style.color = color;
         }
 
-        se.innerHTML = `<span class="session-badge badge-${s.state||'idle'}"></span>
-                        <span class="session-color-dot" style="background:${color};width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>
+        se.innerHTML = `<span class="session-color-dot" style="background:${color};width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>
                         <span class="session-name">${_e(s.display_name||s.id)}</span>`;
         se.addEventListener('click', e => { e.stopPropagation(); App.openSession(s); });
         se.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); _showSctx(e, s); });

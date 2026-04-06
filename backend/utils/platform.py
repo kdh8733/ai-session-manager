@@ -58,3 +58,33 @@ def claude_bin_path(cfg: dict) -> str:
         return claude_bin
     found = shutil.which(claude_bin)
     return found or claude_bin
+
+
+# ---------------------------------------------------------------------------
+# Windows ↔ WSL path conversion
+# ---------------------------------------------------------------------------
+
+def win_to_wsl(path: str) -> str:
+    """Convert a Windows path (C:\\Users\\...) to WSL path (/mnt/c/Users/...).
+    If already a WSL/Linux path, return as-is."""
+    if not path:
+        return path
+    # Already a Linux path
+    if path.startswith("/"):
+        return path
+    # C:\Users\... or C:/Users/...
+    p = path.replace("\\", "/")
+    if len(p) >= 2 and p[1] == ":":
+        drive = p[0].lower()
+        rest = p[2:].lstrip("/")
+        return f"/mnt/{drive}/{rest}"
+    return path
+
+
+def normalize_path(path: str) -> str:
+    """Normalize a path to WSL format and resolve it."""
+    converted = win_to_wsl(path)
+    try:
+        return str(Path(converted).resolve())
+    except Exception:
+        return converted
