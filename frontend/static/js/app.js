@@ -220,6 +220,10 @@ const App = (() => {
     // Move session divs into panes
     if (_split.left) Terminal.openInPane(_split.left, leftPane);
     if (_split.right) Terminal.openInPane(_split.right, rightPane);
+
+    // Refit after layout settles
+    setTimeout(() => Terminal.refitAll(), 300);
+    setTimeout(() => Terminal.refitAll(), 600);
   }
 
   function _unsplit() {
@@ -351,6 +355,19 @@ const App = (() => {
   }
 
   function _e(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  // Terminal pane focus callback (split mode)
+  window._onTerminalFocus = function(sessionId) {
+    const tab = _tabs.find(t => t.sessionId === sessionId);
+    if (tab) {
+      _activeTabId = tab.id;
+      State.set({ activeSessionId: sessionId });
+      _renderTabs();
+      Sidebar.highlightSession(sessionId);
+      const sessions = State.get().sessions || [];
+      _setStatus(sessions.find(x => x.id === sessionId) || { id: sessionId, display_name: tab.label });
+    }
+  };
 
   document.addEventListener('DOMContentLoaded', init);
 

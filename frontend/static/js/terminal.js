@@ -35,15 +35,21 @@ const TerminalMgr = (() => {
     if (_sessions[sessionId]) {
       const s = _sessions[sessionId];
       s.div.style.display = '';
-      setTimeout(() => { try { s.fitAddon?.fit(); s.term.focus(); } catch(e) {} }, 50);
+      _delayFit(s);
       return;
     }
 
     // Create new session terminal
+    _createSession(sessionId, container);
+
+    // Connect WebSocket
+    _connectWs(sessionId);
+  }
+
+  function _createSession(sessionId, parentEl) {
     const div = document.createElement('div');
     div.className = 'xterm-session';
-    div.style.cssText = 'width:100%;height:100%;';
-    container.appendChild(div);
+    parentEl.appendChild(div);
 
     const TermClass = window.Terminal;
     if (!TermClass) {
@@ -76,8 +82,6 @@ const TerminalMgr = (() => {
     }
 
     term.open(div);
-    setTimeout(() => { try { fitAddon?.fit(); } catch(e) {} }, 100);
-    term.focus();
 
     // Keystrokes → WS
     term.onData(data => {
@@ -95,9 +99,8 @@ const TerminalMgr = (() => {
       return true;
     });
 
-    // Resize
+    // Resize observer
     new ResizeObserver(() => {
-      if (_activeId !== sessionId) return;
       const s = _sessions[sessionId];
       if (!s?.fitAddon || !s.term) return;
       try {
@@ -116,11 +119,32 @@ const TerminalMgr = (() => {
       ctxMenu.classList.remove('hidden');
     });
 
+    // Click to activate this session (for split mode)
+    div.addEventListener('mousedown', () => {
+      if (_activeId !== sessionId) {
+        _activeId = sessionId;
+        // Notify app of focus change
+        if (window._onTerminalFocus) window._onTerminalFocus(sessionId);
+      }
+    });
+
     const entry = { div, term, ws: null, fitAddon, retries: 0, intentionalClose: false };
     _sessions[sessionId] = entry;
 
-    // Connect WebSocket
-    _connectWs(sessionId);
+    _delayFit(entry);
+  }
+
+  function _delayFit(s) {
+    setTimeout(() => {
+      try {
+        s.fitAddon?.fit();
+        s.term?.focus();
+      } catch(e) {}
+    }, 50);
+    // Second fit for layout settling
+    setTimeout(() => {
+      try { s.fitAddon?.fit(); } catch(e) {}
+    }, 200);
   }
 
   function _connectWs(sessionId) {
@@ -180,6 +204,51 @@ const TerminalMgr = (() => {
     for (const id of Object.keys(_sessions)) close(id);
   }
 
+  /**
+   * Move a session's terminal div into a specific pane container.
+   * Used for split-pane mode.
+   */
+  function openInPane(sessionId, paneEl) {
+    if (!_sessions[sessionId]) {
+      _createSession(sessionId, paneEl);
+      _connectWs(sessionId);
+    } else {
+      const s = _sessions[sessionId];
+      paneEl.appendChild(s.div);
+      s.div.style.display = '';
+    }
+
+    const s = _sessions[sessionId];
+    if (s?.div) {
+      // Force layout recalculation with multiple fit passes
+      _delayFit(s);
+      setTimeout(() => {
+        try {
+          s.fitAddon?.fit();
+          if (s.ws?.readyState === WebSocket.OPEN) {
+            s.ws.send(JSON.stringify({ type: 'resize', cols: s.term.cols, rows: s.term.rows }));
+          }
+        } catch(e) {}
+      }, 400);
+    }
+  }
+
+  /**
+   * Force re-fit all visible sessions (e.g. after split layout change).
+   */
+  function refitAll() {
+    for (const [id, s] of Object.entries(_sessions)) {
+      if (s.div && s.div.style.display !== 'none' && s.fitAddon) {
+        try {
+          s.fitAddon.fit();
+          if (s.ws?.readyState === WebSocket.OPEN) {
+            s.ws.send(JSON.stringify({ type: 'resize', cols: s.term.cols, rows: s.term.rows }));
+          }
+        } catch(e) {}
+      }
+    }
+  }
+
   // Context menu handlers
   document.addEventListener('click', () => ctxMenu?.classList.add('hidden'));
   document.getElementById('ctx-permissions')?.addEventListener('click', () => {
@@ -201,30 +270,7 @@ const TerminalMgr = (() => {
     if (e.key === 'Escape') searchBar.classList.add('hidden');
   });
 
-  /**
-   * Move a session's terminal div into a specific pane container.
-   */
-  function openInPane(sessionId, paneEl) {
-    // Ensure session is created
-    if (!_sessions[sessionId]) {
-      // Create in the pane
-      _activeId = sessionId;
-      const saved = container;  // save default container ref
-      // Create new session using open, then move its div
-      open(sessionId);
-    }
-    const s = _sessions[sessionId];
-    if (s?.div) {
-      paneEl.appendChild(s.div);
-      s.div.style.display = '';
-      s.div.style.position = 'relative';
-      s.div.style.width = '100%';
-      s.div.style.height = '100%';
-      setTimeout(() => { try { s.fitAddon?.fit(); } catch(e) {} }, 100);
-    }
-  }
-
-  return { open, close, closeAll, openInPane };
+  return { open, close, closeAll, openInPane, refitAll };
 })();
 
 const Terminal = TerminalMgr;

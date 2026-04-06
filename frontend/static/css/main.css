@@ -297,10 +297,11 @@ html, body { height: 100%; overflow: hidden; background: var(--bg3); color: var(
 .ts-cost { color: #a6e3a1; }
 
 /* ── Split pane ──────────────────────────────────────────────── */
-#xterm-container.split-mode { display: flex; }
+#xterm-container.split-mode { display: flex; height: 100%; }
 #xterm-container.split-mode > .split-left,
-#xterm-container.split-mode > .split-right { flex: 1; position: relative; overflow: hidden; }
-#xterm-container.split-mode > .split-left { border-right: 2px solid var(--accent); }
+#xterm-container.split-mode > .split-right { flex: 1; position: relative; overflow: hidden; min-width: 0; }
+#xterm-container.split-mode > .split-left { border-right: 2px solid var(--border); }
+#xterm-container.split-mode .xterm-session { position: relative; width: 100%; height: 100%; }
 
 .drop-zone {
   position: absolute; top: 0; bottom: 0; width: 50%; z-index: 100;
