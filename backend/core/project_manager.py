@@ -45,14 +45,14 @@ def list_projects(cfg: dict) -> list[dict]:
         dp = Path(d)
         if not dp.is_dir():
             continue
-        # Add the directory itself if it looks like a project (has .git or files)
+        # If the directory itself is a project (has .git), add it
         if (dp / ".git").exists() and d not in cwd_set:
             cwd_set[d] = {"path": d, "session_count": 0}
-        # Scan immediate subdirectories as potential projects
+        # Scan immediate subdirectories — only add those with .git
         try:
             for child in dp.iterdir():
                 cp = str(child)
-                if child.is_dir() and not child.name.startswith(".") and cp not in cwd_set:
+                if child.is_dir() and not child.name.startswith(".") and (child / ".git").exists() and cp not in cwd_set:
                     cwd_set[cp] = {"path": cp, "session_count": 0}
         except PermissionError:
             pass
