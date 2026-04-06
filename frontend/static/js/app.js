@@ -298,7 +298,7 @@ const App = (() => {
     apPath.focus();
   });
   document.getElementById('ap-browse')?.addEventListener('click', () => {
-    _openBrowsePopup(path => { apPath.value = path; });
+    DirBrowser.open(path => { apPath.value = path; });
   });
   document.getElementById('ap-cancel')?.addEventListener('click', () => apModal.classList.add('hidden'));
   document.getElementById('ap-add')?.addEventListener('click', async () => {
@@ -311,24 +311,7 @@ const App = (() => {
     await Sidebar.load();
   });
 
-  // ── Directory browser popup ───────────────────────────────────
-  let _browseCallback = null;
-
-  function _openBrowsePopup(callback) {
-    _browseCallback = callback;
-    const w = 650, h = 500;
-    const left = (screen.width - w) / 2;
-    const top = (screen.height - h) / 2;
-    window.open('/browse', 'dir-browser', `width=${w},height=${h},left=${left},top=${top},resizable=yes`);
-  }
-
-  // Called by browse popup when user selects a directory
-  window._onDirSelected = function(path) {
-    if (_browseCallback) {
-      _browseCallback(path);
-      _browseCallback = null;
-    }
-  };
+  // (DirBrowser is in dir-browser.js)
 
   // ── SSE ────────────────────────────────────────────────────────
   function _subscribeSSE() {

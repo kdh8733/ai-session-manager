@@ -6,7 +6,7 @@ import os
 import sys
 from pathlib import Path
 
-from flask import Flask, send_from_directory, render_template
+from flask import Flask, send_from_directory
 from flask_sock import Sock
 
 from backend.core import config as cfg_mod
@@ -55,12 +55,9 @@ def create_app() -> Flask:
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
     def serve_frontend(path):
-        # Directory browser popup
-        if path == "browse":
-            return render_template("browse.html")
         if path and (static_dir / path).exists():
             return send_from_directory(str(static_dir), path)
-        return render_template("index.html")
+        return send_from_directory(str(template_dir), "index.html")
 
     return app
 
