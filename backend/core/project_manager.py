@@ -36,10 +36,24 @@ def list_projects(cfg: dict) -> list[dict]:
         if cwd in cwd_set:
             cwd_set[cwd]["session_count"] += 1
 
-    # Also include configured project_dirs (even if no JSONL history yet)
+    # Also include configured project_dirs and their subdirectories
     for d in cfg.get("project_dirs", []):
-        if d and d not in cwd_set and Path(d).is_dir():
+        if not d:
+            continue
+        dp = Path(d)
+        if not dp.is_dir():
+            continue
+        # Add the directory itself if it looks like a project (has .git or files)
+        if (dp / ".git").exists() and d not in cwd_set:
             cwd_set[d] = {"path": d, "session_count": 0}
+        # Scan immediate subdirectories as potential projects
+        try:
+            for child in dp.iterdir():
+                cp = str(child)
+                if child.is_dir() and not child.name.startswith(".") and cp not in cwd_set:
+                    cwd_set[cp] = {"path": cp, "session_count": 0}
+        except PermissionError:
+            pass
 
     projects = []
     for cwd, info in cwd_set.items():

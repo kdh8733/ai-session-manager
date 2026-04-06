@@ -74,6 +74,7 @@ const App = (() => {
     }
 
     _setStatus(session);
+    Sidebar.highlightSession(session.id);
   }
 
   function openProject(p) { showPanel('history'); }
@@ -83,10 +84,16 @@ const App = (() => {
     tabBar.innerHTML = '';
     _tabs.forEach(tab => {
       const el = document.createElement('div');
-      el.className = 'tab' + (tab.id === _activeTabId ? ' active' : '');
+      const isActive = tab.id === _activeTabId;
+      const color = Sidebar.getSessionColor(tab.sessionId);
+      el.className = 'tab' + (isActive ? ' active' : '');
       el.draggable = true;
       el.dataset.sessionId = tab.sessionId;
-      el.innerHTML = '<span>' + _e(tab.label) + '</span><span class="tab-close" data-id="' + tab.id + '">✕</span>';
+      if (isActive) {
+        el.style.borderBottom = `2px solid ${color}`;
+      }
+      el.innerHTML = '<span class="tab-color-dot" style="background:' + color + ';width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>'
+        + '<span>' + _e(tab.label) + '</span><span class="tab-close" data-id="' + tab.id + '">✕</span>';
 
       el.addEventListener('click', e => {
         if (e.target.dataset.id) _closeTab(e.target.dataset.id);
@@ -108,10 +115,12 @@ const App = (() => {
     _renderTabs();
     const tab = _tabs.find(t => t.id === tabId);
     if (!tab) return;
+    State.set({ activeSessionId: tab.sessionId });
     showPanel('terminal');
     if (!_split) Terminal.open(tab.sessionId);
     const sessions = State.get().sessions || [];
     _setStatus(sessions.find(x => x.id === tab.sessionId) || { id: tab.sessionId, display_name: tab.label });
+    Sidebar.highlightSession(tab.sessionId);
   }
 
   function _closeTab(tabId) {
@@ -127,7 +136,7 @@ const App = (() => {
     _tabs = _tabs.filter(t => t.id !== tabId);
     if (_activeTabId === tabId) _activeTabId = _tabs.at(-1)?.id || null;
     _renderTabs();
-    if (!_tabs.length) { showPanel('welcome'); _clearStatus(); }
+    if (!_tabs.length) { showPanel('welcome'); _clearStatus(); Sidebar.highlightSession(null); }
     else if (_activeTabId) _switchTab(_activeTabId);
   }
 

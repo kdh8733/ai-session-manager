@@ -95,7 +95,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg3); color: var(
   font-size: 13px;
 }
 .session-item:hover { background: var(--surface); }
-.session-item.active { background: var(--surface); color: var(--accent); }
+.session-item.active { background: var(--surface); }
 
 .session-badge {
   width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
@@ -151,7 +151,7 @@ html, body { height: 100%; overflow: hidden; background: var(--bg3); color: var(
   white-space: nowrap; font-size: 13px; color: var(--text-dim); flex-shrink: 0;
 }
 .tab:hover { background: var(--surface); color: var(--text); }
-.tab.active { background: var(--bg); color: var(--text); border-bottom: 2px solid var(--accent); }
+.tab.active { background: var(--bg); color: var(--text); }
 .tab-close { opacity: 0; font-size: 12px; }
 .tab:hover .tab-close { opacity: 1; }
 

@@ -1,5 +1,6 @@
 /**
  * sidebar.js — Project tree, session list, context menus.
+ * Each session gets a persistent random accent color.
  */
 
 const Sidebar = (() => {
@@ -8,6 +9,29 @@ const Sidebar = (() => {
   const sctx = document.getElementById('session-ctx-menu');
   let _ctxProject = null;
   let _ctxSession = null;
+
+  // Session color palette — distinct, readable colors
+  const SESSION_COLORS = [
+    '#f38ba8', '#fab387', '#f9e2af', '#a6e3a1', '#94e2d5',
+    '#89dceb', '#89b4fa', '#b4befe', '#cba6f7', '#f5c2e7',
+    '#eba0ac', '#f2cdcd', '#74c7ec', '#a6adc8', '#f5e0dc',
+  ];
+
+  // Persistent color map: session_id → color
+  const _colorMap = {};
+
+  function _getSessionColor(sessionId) {
+    if (!_colorMap[sessionId]) {
+      // Hash-based deterministic color
+      let hash = 0;
+      for (let i = 0; i < sessionId.length; i++) {
+        hash = ((hash << 5) - hash) + sessionId.charCodeAt(i);
+        hash |= 0;
+      }
+      _colorMap[sessionId] = SESSION_COLORS[Math.abs(hash) % SESSION_COLORS.length];
+    }
+    return _colorMap[sessionId];
+  }
 
   async function load() {
     const [projects, sessions] = await Promise.all([
@@ -20,6 +44,7 @@ const Sidebar = (() => {
 
   function _render(projects, sessions) {
     tree.innerHTML = '';
+    const activeId = State.get().activeSessionId;
 
     const byProj = {};
     sessions.forEach(s => {
@@ -47,9 +72,19 @@ const Sidebar = (() => {
       // Sessions under project
       (byProj[_san(p.name)] || []).forEach(s => {
         const se = document.createElement('div');
-        se.className = 'session-item' + (s.id === State.get().activeSessionId ? ' active' : '');
+        const isActive = s.id === activeId;
+        const color = _getSessionColor(s.id);
+        se.className = 'session-item' + (isActive ? ' active' : '');
         se.dataset.sessionId = s.id;
+
+        if (isActive) {
+          se.style.borderLeft = `3px solid ${color}`;
+          se.style.background = color + '18'; // 10% opacity
+          se.style.color = color;
+        }
+
         se.innerHTML = `<span class="session-badge badge-${s.state||'idle'}"></span>
+                        <span class="session-color-dot" style="background:${color};width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>
                         <span class="session-name">${_e(s.display_name||s.id)}</span>`;
         se.addEventListener('click', e => { e.stopPropagation(); App.openSession(s); });
         se.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); _showSctx(e, s); });
@@ -62,6 +97,32 @@ const Sidebar = (() => {
 
   function _setActive(key) {
     tree.querySelectorAll('.project-item').forEach(el => el.classList.toggle('active', el.dataset.key === key));
+  }
+
+  function highlightSession(sessionId) {
+    // Clear all session highlights
+    tree.querySelectorAll('.session-item').forEach(el => {
+      el.classList.remove('active');
+      el.style.borderLeft = '';
+      el.style.background = '';
+      el.style.color = '';
+    });
+
+    // Highlight the active one
+    if (sessionId) {
+      const el = tree.querySelector(`[data-session-id="${sessionId}"]`);
+      if (el) {
+        const color = _getSessionColor(sessionId);
+        el.classList.add('active');
+        el.style.borderLeft = `3px solid ${color}`;
+        el.style.background = color + '18';
+        el.style.color = color;
+      }
+    }
+  }
+
+  function getSessionColor(sessionId) {
+    return _getSessionColor(sessionId);
   }
 
   function updateSessionBadge(sid, state) {
@@ -134,5 +195,5 @@ const Sidebar = (() => {
   function _san(n) { return n.replace(/[.\s]/g, '_'); }
   function _e(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-  return { load, updateSessionBadge };
+  return { load, updateSessionBadge, highlightSession, getSessionColor };
 })();

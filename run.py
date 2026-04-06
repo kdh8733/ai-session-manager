@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Launcher for AI Session Manager (tmux backend)."""
 import argparse
+import logging
 import sys
 from pathlib import Path
 
@@ -22,6 +23,9 @@ def main():
 
     host = args.host or cfg.get("host", "0.0.0.0")
     port = args.port or cfg.get("port", 5000)
+
+    # Suppress Flask/Werkzeug development server warning
+    logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
     session_manager.cleanup_orphan_attaches()
     app.run(host=host, port=port, debug=args.debug, threaded=True)
