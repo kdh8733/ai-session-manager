@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Session Manager</title>
+
+  <!-- xterm.js 5.5 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css" />
+  <!-- Chart.js -->
+  <!-- marked (markdown) -->
+  <!-- highlight.js (code) -->
+
+  <link rel="stylesheet" href="/static/css/main.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     ONBOARDING OVERLAY (shown when not configured)
+═══════════════════════════════════════════════════════════════════════ -->
+<div id="onboarding" class="onboarding hidden">
+  <div class="onboarding-card">
+    <h1>AI Session Manager</h1>
+    <p>Claude CLI 세션을 브라우저에서 관리하세요.</p>
+    <div class="form-group">
+      <label>프로젝트 디렉토리 (여러 개, 줄바꿈 구분)</label>
+      <textarea id="ob-project-dirs" rows="4" placeholder="/home/user/projects&#10;/home/user/work"></textarea>
+    </div>
+    <div class="form-group">
+      <label>claude 실행 파일 경로</label>
+      <input id="ob-claude-bin" type="text" value="claude" />
+    </div>
+    <button id="ob-save" class="btn-primary">저장하고 시작</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     COMMAND PALETTE
+═══════════════════════════════════════════════════════════════════════ -->
+<div id="cmd-palette" class="cmd-palette hidden">
+  <div class="cmd-palette-inner">
+    <input id="cmd-input" type="text" placeholder="프로젝트 / 세션 검색..." autocomplete="off" />
+    <ul id="cmd-results"></ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     MAIN LAYOUT
+═══════════════════════════════════════════════════════════════════════ -->
+<div id="app" class="app-layout">
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────────────────── -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <span class="logo">⚡ CM</span>
+      <button id="btn-add-project" class="btn-icon" title="프로젝트 추가">＋</button>
+      <button id="btn-cmd-palette" class="btn-icon" title="Ctrl+K">⌘</button>
+    </div>
+
+    <!-- Project tree -->
+    <div class="sidebar-section">
+      <div class="section-title">
+        <span>프로젝트</span>
+        <button id="btn-refresh-projects" class="btn-micro">↺</button>
+      </div>
+      <div id="project-tree" class="project-tree"></div>
+    </div>
+
+    <!-- Separator -->
+    <hr class="sidebar-hr" />
+
+    <!-- Special nav -->
+    <nav class="sidebar-nav">
+      <button class="nav-item" data-panel="history">📋 히스토리</button>
+      <button class="nav-item" data-panel="favorites">★ 즐겨찾기</button>
+      <button class="nav-item" data-panel="bookmarks">🔖 북마크</button>
+      <button class="nav-item" data-panel="cost">💰 비용</button>
+      <button class="nav-item" data-panel="settings">⚙ 설정</button>
+    </nav>
+  </aside>
+
+  <!-- ── MAIN PANEL ──────────────────────────────────────────────────── -->
+  <main id="main" class="main-panel">
+
+    <!-- Tab bar (multi-session) -->
+    <div id="tab-bar" class="tab-bar"></div>
+
+    <!-- Panels -->
+    <div id="panel-terminal" class="panel panel-terminal hidden">
+      <div id="terminal-search-bar" class="terminal-search-bar hidden">
+        <input id="term-search-input" type="text" placeholder="검색..." />
+        <span id="term-search-count"></span>
+        <button id="term-search-prev">↑</button>
+        <button id="term-search-next">↓</button>
+        <button id="term-search-close">✕</button>
+      </div>
+      <div id="xterm-container"></div>
+      <!-- Right-click context menu -->
+      <ul id="ctx-menu" class="ctx-menu hidden">
+        <li id="ctx-permissions">Open Permissions</li>
+        <li id="ctx-paste">Paste</li>
+      </ul>
+    </div>
+
+    <div id="panel-history" class="panel panel-history hidden">
+      <div class="panel-toolbar">
+        <input id="history-search" type="text" placeholder="히스토리 검색..." />
+      </div>
+      <div class="history-body">
+        <div id="history-list" class="history-list"></div>
+        <div id="history-viewer" class="history-viewer"></div>
+      </div>
+    </div>
+
+    <div id="panel-favorites" class="panel panel-favorites hidden">
+      <div class="panel-toolbar">
+        <input id="fav-search" type="text" placeholder="즐겨찾기 검색..." />
+      </div>
+      <div id="favorites-list"></div>
+    </div>
+
+    <div id="panel-bookmarks" class="panel panel-bookmarks hidden">
+      <div class="panel-toolbar">
+        <input id="bm-search" type="text" placeholder="북마크 검색..." />
+        <input id="bm-tag" type="text" placeholder="태그..." />
+      </div>
+      <div id="bookmarks-list"></div>
+    </div>
+
+    <div id="panel-cost" class="panel panel-cost hidden">
+      <div class="cost-header">
+        <h2>비용 대시보드</h2>
+        <label>USD→KRW <input id="usd-to-krw" type="number" value="0" min="0" /></label>
+        <button id="btn-refresh-cost" class="btn-primary">새로고침</button>
+      </div>
+      <div id="cost-overview" class="cost-overview"></div>
+      <div class="cost-charts">
+        <canvas id="chart-daily" height="120"></canvas>
+      </div>
+      <div class="cost-tables">
+        <div id="cost-by-project"></div>
+        <div id="cost-by-model"></div>
+      </div>
+      <div id="cost-sessions"></div>
+    </div>
+
+    <div id="panel-settings" class="panel panel-settings hidden">
+      <h2>설정</h2>
+      <div class="form-group">
+        <label>프로젝트 디렉토리</label>
+        <textarea id="cfg-project-dirs" rows="6"></textarea>
+      </div>
+      <div class="form-group">
+        <label>claude 실행 파일</label>
+        <input id="cfg-claude-bin" type="text" />
+      </div>
+      <div class="form-group">
+        <label>Claude 데이터 디렉토리 (~/.claude)</label>
+        <input id="cfg-claude-dir" type="text" />
+      </div>
+      <button id="cfg-save" class="btn-primary">저장</button>
+
+      <hr />
+      <h3>커스텀 폰트</h3>
+      <input type="file" id="font-upload" accept=".ttf,.woff,.woff2,.otf" />
+      <button id="btn-upload-font" class="btn-secondary">업로드</button>
+      <ul id="font-list"></ul>
+    </div>
+
+    <!-- Welcome screen -->
+    <div id="panel-welcome" class="panel panel-welcome">
+      <h2>환영합니다</h2>
+      <p>좌측 사이드바에서 프로젝트를 선택하거나 새 세션을 만드세요.</p>
+      <div id="recent-sessions" class="recent-sessions"></div>
+    </div>
+
+  </main>
+
+  <!-- ── STATUS BAR ───────────────────────────────────────────────────── -->
+  <div id="status-bar" class="status-bar">
+    <span id="status-session"></span>
+    <span id="status-git"></span>
+    <span id="status-model"></span>
+    <span id="status-tokens"></span>
+    <span id="status-cost"></span>
+  </div>
+
+</div><!-- /#app -->
+
+<!-- Project context menu -->
+<ul id="project-ctx-menu" class="ctx-menu hidden">
+  <li id="pctx-new-session">New Session</li>
+  <li id="pctx-hide-project">Hide Project</li>
+  <li id="pctx-remove-project">Remove Project</li>
+</ul>
+
+<!-- Session context menu -->
+<ul id="session-ctx-menu" class="ctx-menu hidden">
+  <li id="sctx-rename">Rename</li>
+  <li id="sctx-delete">Delete Session</li>
+</ul>
+
+<!-- Add project modal with directory browser -->
+<div id="modal-add-project" class="modal hidden">
+  <div class="modal-card" style="width:500px">
+    <h3>프로젝트 추가</h3>
+    <div class="form-group">
+      <label>경로 직접 입력</label>
+      <input id="ap-path" type="text" placeholder="C:\Users\me\my-project" />
+    </div>
+    <div class="form-group">
+      <label>또는 디렉토리 찾아보기</label>
+      <div id="ap-dir-tree" class="dir-tree"></div>
+    </div>
+    <div class="modal-actions">
+      <button id="ap-cancel" class="btn-secondary">취소</button>
+      <button id="ap-add" class="btn-primary">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- New session modal -->
+<div id="modal-new-session" class="modal hidden">
+  <div class="modal-card">
+    <h3>새 세션</h3>
+    <div class="form-group" id="ns-project-group">
+      <label>프로젝트</label>
+      <select id="ns-project"></select>
+    </div>
+    <div class="form-group">
+      <label>세션 이름 (선택)</label>
+      <input id="ns-name" type="text" placeholder="my-feature" />
+    </div>
+    <div class="form-group">
+      <label>
+        <input id="ns-skip-perm" type="checkbox" checked />
+        --dangerously-skip-permissions
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button id="ns-cancel" class="btn-secondary">취소</button>
+      <button id="ns-create" class="btn-primary">만들기</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-search@0.16.0/lib/addon-search.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.11.0/lib/addon-fit.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css" />
+
+<script src="/static/js/i18n.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/state.js"></script>
+<script src="/static/js/sidebar.js"></script>
+<script src="/static/js/terminal.js"></script>
+<script src="/static/js/history.js"></script>
+<script src="/static/js/cost.js"></script>
+<script src="/static/js/favorites.js"></script>
+<script src="/static/js/bookmarks.js"></script>
+<script src="/static/js/settings.js"></script>
+<script src="/static/js/palette.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>

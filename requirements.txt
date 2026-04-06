@@ -1,0 +1,8 @@
+# Core
+flask>=3.0.0
+flask-sock>=0.7.0
+psutil>=5.9.0
+anthropic>=0.40.0
+
+# PTY (for tmux attach bridging)
+ptyprocess>=0.7.0

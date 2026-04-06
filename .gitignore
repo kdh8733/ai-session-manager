@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.log
+
+# Session persistence (local data, not for git)
+session_data/
+
+# Test files
+_check.py
+_debug*.py
+_test*.py
+_quick*.py
+
+# OS
+Thumbs.db
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
