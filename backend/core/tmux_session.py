@@ -7,6 +7,8 @@ Metadata stored as tmux user options: @display_name, @jsonl_id.
 Sessions persist across server restarts (tmux keeps them alive).
 The PTY bridge attaches to tmux sessions via ptyprocess.
 """
+from __future__ import annotations
+
 import json
 import os
 import re

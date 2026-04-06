@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 JSONL parser for Claude CLI history files.
 

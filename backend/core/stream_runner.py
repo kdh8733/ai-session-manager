@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Stream session runner: spawns claude CLI directly (no tmux) and streams
 stdout over a WebSocket.
