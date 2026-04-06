@@ -51,6 +51,11 @@ def create_app() -> Flask:
     def browse_dirs():
         return settings.browse_dirs()
 
+    # Directory browser popup
+    @app.route("/browse")
+    def browse_page():
+        return send_from_directory(str(template_dir), "browse.html")
+
     # Serve frontend
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")

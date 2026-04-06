@@ -13,12 +13,11 @@ ALLOWED_FONT_EXTS = {".ttf", ".woff", ".woff2", ".otf"}
 @bp.get("/")
 def get_settings():
     cfg = current_app.config["CM"]
-    # Don't expose internal keys
     return jsonify({
         "project_dirs": cfg.get("project_dirs", []),
         "claude_bin": cfg.get("claude_bin", "claude"),
         "claude_dir": cfg.get("claude_dir", ""),
-        "host": cfg.get("host", "127.0.0.1"),
+        "host": cfg.get("host", "0.0.0.0"),
         "port": cfg.get("port", 5000),
     })
 
@@ -39,7 +38,6 @@ def update_settings():
 
 @bp.post("/fonts")
 def upload_font():
-    cfg = current_app.config["CM"]
     font_dir = Path(cfg_mod.CONFIG_DIR) / "fonts"
     font_dir.mkdir(parents=True, exist_ok=True)
 
@@ -67,20 +65,29 @@ def list_fonts():
 
 @bp.route("/browse", endpoint="browse_settings")
 def browse_dirs():
-    """Directory browser for the add-project modal."""
+    """Directory browser API. WSL-aware: shows /mnt/ drives + home."""
     raw = request.args.get("path", "")
 
-    # No path: return root and home
+    # No path: show quick-access roots
     if not raw:
+        roots = []
         home = str(Path.home())
-        return jsonify({"parent": None, "dirs": [
-            {"name": "/", "path": "/"},
-            {"name": "~", "path": home},
-        ]})
+        roots.append({"name": "Home (" + home + ")", "path": home})
+
+        # WSL mount points (Windows drives)
+        mnt = Path("/mnt")
+        if mnt.is_dir():
+            for child in sorted(mnt.iterdir()):
+                if child.is_dir() and len(child.name) == 1 and child.name.isalpha():
+                    label = child.name.upper() + ": drive"
+                    roots.append({"name": label, "path": str(child)})
+
+        roots.append({"name": "/", "path": "/"})
+        return jsonify({"parent": None, "current": "", "dirs": roots})
 
     p = Path(raw)
     if not p.is_dir():
-        return jsonify({"parent": str(p.parent), "dirs": []})
+        return jsonify({"parent": str(p.parent), "current": raw, "dirs": []})
 
     parent = str(p.parent) if p.parent != p else None
     dirs = []
@@ -90,4 +97,4 @@ def browse_dirs():
                 dirs.append({"name": child.name, "path": str(child)})
     except PermissionError:
         pass
-    return jsonify({"parent": parent, "dirs": dirs[:100]})
+    return jsonify({"parent": parent, "current": raw, "dirs": dirs[:200]})

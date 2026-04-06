@@ -19,6 +19,36 @@ const Settings = (() => {
     _loadFonts();
   }
 
+  // Browse button for settings
+  document.getElementById('cfg-browse-dir')?.addEventListener('click', () => {
+    App._openBrowsePopup || window._openBrowsePopup;
+    const w = 650, h = 500;
+    const left = (screen.width - w) / 2;
+    const top = (screen.height - h) / 2;
+    const saved = window._onDirSelected;
+    window._onDirSelected = function(path) {
+      const cur = cfgProjectDirs.value.trim();
+      cfgProjectDirs.value = cur ? cur + '\n' + path : path;
+      window._onDirSelected = saved;
+    };
+    window.open('/browse', 'dir-browser', `width=${w},height=${h},left=${left},top=${top},resizable=yes`);
+  });
+
+  // Browse button for onboarding
+  document.getElementById('ob-browse')?.addEventListener('click', () => {
+    const obDirs = document.getElementById('ob-project-dirs');
+    const w = 650, h = 500;
+    const left = (screen.width - w) / 2;
+    const top = (screen.height - h) / 2;
+    const saved = window._onDirSelected;
+    window._onDirSelected = function(path) {
+      const cur = obDirs.value.trim();
+      obDirs.value = cur ? cur + '\n' + path : path;
+      window._onDirSelected = saved;
+    };
+    window.open('/browse', 'dir-browser', `width=${w},height=${h},left=${left},top=${top},resizable=yes`);
+  });
+
   cfgSave.addEventListener('click', async () => {
     const project_dirs = cfgProjectDirs.value
       .split('\n')

@@ -24,7 +24,8 @@
     <p>Claude CLI 세션을 브라우저에서 관리하세요.</p>
     <div class="form-group">
       <label>프로젝트 디렉토리 (여러 개, 줄바꿈 구분)</label>
-      <textarea id="ob-project-dirs" rows="4" placeholder="/home/user/projects&#10;/home/user/work"></textarea>
+      <textarea id="ob-project-dirs" rows="4" placeholder="/home/user/projects&#10;/mnt/c/Users/me/work"></textarea>
+      <button id="ob-browse" class="btn-secondary" style="margin-top:6px">찾아보기...</button>
     </div>
     <div class="form-group">
       <label>claude 실행 파일 경로</label>
@@ -158,6 +159,7 @@
       <div class="form-group">
         <label>프로젝트 디렉토리</label>
         <textarea id="cfg-project-dirs" rows="6"></textarea>
+        <button id="cfg-browse-dir" class="btn-secondary" style="margin-top:6px">찾아보기...</button>
       </div>
       <div class="form-group">
         <label>claude 실행 파일</label>
@@ -200,17 +202,16 @@
   <li id="sctx-delete">Delete Session</li>
 </ul>
 
-<!-- Add project modal with directory browser -->
+<!-- Add project modal -->
 <div id="modal-add-project" class="modal hidden">
-  <div class="modal-card" style="width:500px">
+  <div class="modal-card" style="width:460px">
     <h3>프로젝트 추가</h3>
     <div class="form-group">
-      <label>경로 직접 입력</label>
-      <input id="ap-path" type="text" placeholder="C:\Users\me\my-project" />
-    </div>
-    <div class="form-group">
-      <label>또는 디렉토리 찾아보기</label>
-      <div id="ap-dir-tree" class="dir-tree"></div>
+      <label>프로젝트 경로</label>
+      <div style="display:flex;gap:6px">
+        <input id="ap-path" type="text" placeholder="/mnt/c/Users/me/my-project" style="flex:1" />
+        <button id="ap-browse" class="btn-secondary">찾아보기...</button>
+      </div>
     </div>
     <div class="modal-actions">
       <button id="ap-cancel" class="btn-secondary">취소</button>

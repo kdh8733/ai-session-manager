@@ -288,16 +288,17 @@ const App = (() => {
     openSession(session);
   });
 
-  // ── Add Project modal with directory browser ───────────────────
+  // ── Add Project modal ──────────────────────────────────────────
   const apModal = document.getElementById('modal-add-project');
   const apPath  = document.getElementById('ap-path');
-  const apTree  = document.getElementById('ap-dir-tree');
 
   document.getElementById('btn-add-project')?.addEventListener('click', () => {
     apPath.value = '';
     apModal.classList.remove('hidden');
     apPath.focus();
-    _loadDirTree('');
+  });
+  document.getElementById('ap-browse')?.addEventListener('click', () => {
+    _openBrowsePopup(path => { apPath.value = path; });
   });
   document.getElementById('ap-cancel')?.addEventListener('click', () => apModal.classList.add('hidden'));
   document.getElementById('ap-add')?.addEventListener('click', async () => {
@@ -310,27 +311,24 @@ const App = (() => {
     await Sidebar.load();
   });
 
-  async function _loadDirTree(path) {
-    if (!apTree) return;
-    try {
-      const dirs = await API.get('/api/browse?path=' + encodeURIComponent(path));
-      apTree.innerHTML = '';
-      if (dirs.parent) {
-        const up = document.createElement('div');
-        up.className = 'dir-item';
-        up.textContent = '📁 ..';
-        up.addEventListener('click', () => { apPath.value = dirs.parent; _loadDirTree(dirs.parent); });
-        apTree.appendChild(up);
-      }
-      (dirs.dirs || []).forEach(d => {
-        const el = document.createElement('div');
-        el.className = 'dir-item';
-        el.textContent = '📁 ' + d.name;
-        el.addEventListener('click', () => { apPath.value = d.path; _loadDirTree(d.path); });
-        apTree.appendChild(el);
-      });
-    } catch(e) { apTree.innerHTML = '<div style="color:var(--text-dim);padding:8px">Unable to browse</div>'; }
+  // ── Directory browser popup ───────────────────────────────────
+  let _browseCallback = null;
+
+  function _openBrowsePopup(callback) {
+    _browseCallback = callback;
+    const w = 650, h = 500;
+    const left = (screen.width - w) / 2;
+    const top = (screen.height - h) / 2;
+    window.open('/browse', 'dir-browser', `width=${w},height=${h},left=${left},top=${top},resizable=yes`);
   }
+
+  // Called by browse popup when user selects a directory
+  window._onDirSelected = function(path) {
+    if (_browseCallback) {
+      _browseCallback(path);
+      _browseCallback = null;
+    }
+  };
 
   // ── SSE ────────────────────────────────────────────────────────
   function _subscribeSSE() {
