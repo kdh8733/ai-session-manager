@@ -95,6 +95,15 @@
         <button id="term-search-close">✕</button>
       </div>
       <div id="xterm-container"></div>
+      <!-- Status line (inside terminal, like real CLI) -->
+      <div id="terminal-status" class="terminal-status">
+        <span id="status-session" class="ts-item"></span>
+        <span id="status-git" class="ts-item"></span>
+        <span class="ts-spacer"></span>
+        <span id="status-model" class="ts-item"></span>
+        <span id="status-tokens" class="ts-item"></span>
+        <span id="status-cost" class="ts-item ts-cost"></span>
+      </div>
       <!-- Right-click context menu -->
       <ul id="ctx-menu" class="ctx-menu hidden">
         <li id="ctx-permissions">Open Permissions</li>
@@ -175,15 +184,6 @@
     </div>
 
   </main>
-
-  <!-- ── STATUS BAR ───────────────────────────────────────────────────── -->
-  <div id="status-bar" class="status-bar">
-    <span id="status-session"></span>
-    <span id="status-git"></span>
-    <span id="status-model"></span>
-    <span id="status-tokens"></span>
-    <span id="status-cost"></span>
-  </div>
 
 </div><!-- /#app -->
 

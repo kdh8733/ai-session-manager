@@ -225,15 +225,14 @@ const App = (() => {
     if (tab) Terminal.open(tab.sessionId);
   }
 
-  // ── Status bar ─────────────────────────────────────────────────
+  // ── Terminal status line ────────────────────────────────────────
   function _setStatus(session) {
-    stSession.textContent = session.display_name || session.id || '—';
+    stSession.textContent = session.display_name || session.id || '';
     const proj = (State.get().projects||[]).find(p => session.id?.startsWith('cm-' + p.name.replace(/[.\s]/g,'_')));
-    stGit.textContent = proj?.git?.branch ? ('⎇ ' + proj.git.branch + (proj.git.dirty?'*':'')) : '—';
-    // Defaults until stats load
-    stModel.textContent = '—';
-    stTokens.textContent = '—';
-    stCost.textContent = '$0';
+    stGit.textContent = proj?.git?.branch ? (proj.git.branch + (proj.git.dirty?' *':'')) : '';
+    stModel.textContent = '';
+    stTokens.textContent = '';
+    stCost.textContent = '';
 
     if (_statsTimer) clearInterval(_statsTimer);
     _pollStats(session.id);
@@ -245,11 +244,11 @@ const App = (() => {
     try {
       const s = await API.get('/api/sessions/' + sid + '/stats');
       const m = (s.model||'').replace(/^claude-/,'').replace(/-\d{8}$/,'');
-      stModel.textContent = m || '—';
+      stModel.textContent = m || '';
       stTokens.textContent = s.total_tokens
-        ? ('ctx ' + s.context_pct + '% · ' + _k(s.input_tokens) + '↑ ' + _k(s.output_tokens) + '↓')
-        : '—';
-      stCost.textContent = '$' + (s.cost_usd||0).toFixed(4);
+        ? (_k(s.input_tokens) + ' in ' + _k(s.output_tokens) + ' out  ' + s.context_pct + '% ctx')
+        : '';
+      stCost.textContent = s.cost_usd ? ('$' + s.cost_usd.toFixed(4)) : '';
     } catch(e) {}
   }
 
