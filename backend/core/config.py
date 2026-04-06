@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 
-from backend.utils.platform import config_dir as _platform_config_dir, claude_data_dir as _platform_claude_dir
+from backend.utils.platform import config_dir as _platform_config_dir, claude_data_dir as _platform_claude_dir, normalize_path
 
 _env_config_dir = os.environ.get("CM_CONFIG_DIR")
 CONFIG_DIR: Path = Path(_env_config_dir) if _env_config_dir else _platform_config_dir()
@@ -35,6 +35,9 @@ def load() -> dict:
     env_dirs = os.environ.get("CM_PROJECT_DIRS")
     if env_dirs:
         cfg["project_dirs"] = [d.strip() for d in env_dirs.split(",") if d.strip()]
+
+    # Always normalize project_dirs (Windows → WSL path conversion)
+    cfg["project_dirs"] = [normalize_path(d) for d in cfg.get("project_dirs", []) if d]
 
     return cfg
 

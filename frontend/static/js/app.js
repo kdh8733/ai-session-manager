@@ -369,6 +369,17 @@ const App = (() => {
     }
   };
 
+  // Ctrl+1~9: switch to tab by position
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key >= '1' && e.key <= '9') {
+      const idx = parseInt(e.key) - 1;
+      if (idx < _tabs.length) {
+        e.preventDefault();
+        _switchTab(_tabs[idx].id);
+      }
+    }
+  });
+
   document.addEventListener('DOMContentLoaded', init);
 
   return { init, showPanel, openSession, openProject, openNewSessionModal };
