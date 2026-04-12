@@ -59,6 +59,37 @@ find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/claude-manager"
 mkdir -p "$CONFIG_DIR"
 
+# ========== 6b. Claude statusline setup ==========
+STATUSLINE_SRC="$(dirname "$0")/claude-statusline/bin/statusline.sh"
+STATUSLINE_DEST="$HOME/.claude/statusline.sh"
+SETTINGS_FILE="$HOME/.claude/settings.json"
+
+if [ -f "$STATUSLINE_SRC" ]; then
+    if [ ! -f "$STATUSLINE_DEST" ] || ! diff -q "$STATUSLINE_DEST" "$STATUSLINE_SRC" &>/dev/null; then
+        mkdir -p "$HOME/.claude"
+        [ -f "$STATUSLINE_DEST" ] && cp "$STATUSLINE_DEST" "${STATUSLINE_DEST}.bak"
+        cp "$STATUSLINE_SRC" "$STATUSLINE_DEST"
+        chmod +x "$STATUSLINE_DEST"
+        echo "statusline: installed to $STATUSLINE_DEST"
+    fi
+
+    # Inject statusLine into Claude settings.json if not already set
+    if command -v jq &>/dev/null; then
+        if [ ! -f "$SETTINGS_FILE" ]; then
+            echo '{}' > "$SETTINGS_FILE"
+        fi
+        current_cmd=$(jq -r '.statusLine.command // ""' "$SETTINGS_FILE" 2>/dev/null)
+        if [ "$current_cmd" != 'bash "$HOME/.claude/statusline.sh"' ]; then
+            tmp=$(mktemp)
+            jq '.statusLine = {"type": "command", "command": "bash \"$HOME/.claude/statusline.sh\""}' \
+                "$SETTINGS_FILE" > "$tmp" && mv "$tmp" "$SETTINGS_FILE"
+            echo "statusline: updated $SETTINGS_FILE"
+        fi
+    else
+        echo "statusline: jq not found — skipping settings.json update (install jq to enable)"
+    fi
+fi
+
 # ========== 7. Start tmux server ==========
 tmux start-server 2>/dev/null || true
 
