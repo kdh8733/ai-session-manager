@@ -61,32 +61,50 @@ mkdir -p "$CONFIG_DIR"
 
 # ========== 6b. Claude statusline setup ==========
 STATUSLINE_SRC="$(dirname "$0")/claude-statusline/bin/statusline.sh"
-STATUSLINE_DEST="$HOME/.claude/statusline.sh"
-SETTINGS_FILE="$HOME/.claude/settings.json"
+
+# Determine claude_dir: read from config if available, fall back to $HOME/.claude
+CLAUDE_DIR="$HOME/.claude"
+CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/claude-manager/config.json"
+if [ -f "$CONFIG_FILE" ] && command -v python3 &>/dev/null; then
+    _cdir=$(python3 -c "
+import json, os
+try:
+    d = json.load(open('$CONFIG_FILE')).get('claude_dir', '')
+    print(os.path.expanduser(d) if d else '')
+except: pass
+" 2>/dev/null)
+    [ -n "$_cdir" ] && CLAUDE_DIR="$_cdir"
+fi
+
+STATUSLINE_DEST="$CLAUDE_DIR/statusline.sh"
+SETTINGS_FILE="$CLAUDE_DIR/settings.json"
 
 if [ -f "$STATUSLINE_SRC" ]; then
     if [ ! -f "$STATUSLINE_DEST" ] || ! diff -q "$STATUSLINE_DEST" "$STATUSLINE_SRC" &>/dev/null; then
-        mkdir -p "$HOME/.claude"
+        mkdir -p "$CLAUDE_DIR"
         [ -f "$STATUSLINE_DEST" ] && cp "$STATUSLINE_DEST" "${STATUSLINE_DEST}.bak"
         cp "$STATUSLINE_SRC" "$STATUSLINE_DEST"
         chmod +x "$STATUSLINE_DEST"
         echo "statusline: installed to $STATUSLINE_DEST"
     fi
 
-    # Inject statusLine into Claude settings.json if not already set
-    if command -v jq &>/dev/null; then
-        if [ ! -f "$SETTINGS_FILE" ]; then
-            echo '{}' > "$SETTINGS_FILE"
-        fi
-        current_cmd=$(jq -r '.statusLine.command // ""' "$SETTINGS_FILE" 2>/dev/null)
-        if [ "$current_cmd" != 'bash "$HOME/.claude/statusline.sh"' ]; then
-            tmp=$(mktemp)
-            jq '.statusLine = {"type": "command", "command": "bash \"$HOME/.claude/statusline.sh\""}' \
-                "$SETTINGS_FILE" > "$tmp" && mv "$tmp" "$SETTINGS_FILE"
-            echo "statusline: updated $SETTINGS_FILE"
-        fi
-    else
-        echo "statusline: jq not found — skipping settings.json update (install jq to enable)"
+    # Inject statusLine into settings.json using python3 (no jq dependency)
+    if command -v python3 &>/dev/null; then
+        python3 - "$SETTINGS_FILE" << 'PYEOF'
+import json, sys
+path = sys.argv[1]
+try:
+    s = json.load(open(path))
+except Exception:
+    s = {}
+want = {'type': 'command', 'command': 'bash "$HOME/.claude/statusline.sh"'}
+if s.get('statusLine') != want:
+    s['statusLine'] = want
+    json.dump(s, open(path, 'w'), indent=2)
+    print(f'statusline: updated {path}')
+else:
+    print('statusline: settings.json already configured')
+PYEOF
     fi
 fi
 

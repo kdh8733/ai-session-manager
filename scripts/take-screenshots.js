@@ -14,6 +14,7 @@ const OUT_DIR = path.join(__dirname, "../docs/screenshots");
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
 const VIEWPORT = { width: 1400, height: 860 };
+const VIEWPORT_HI = { width: 1600, height: 960, deviceScaleFactor: 1.5 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function shot(page, filename, fn) {
@@ -82,19 +83,19 @@ async function clickNav(page, text) {
     await mockProjects(p);
   });
 
-  // ── 1b. Terminal — click session to open terminal tab ──────
+  // ── 1b. Terminal — high-res shot with statusline visible ──
+  await page.setViewport(VIEWPORT_HI);
   await shot(page, "terminal.png", async (p) => {
     await p.goto(BASE_URL, base);
     await sleep(800);
     await mockProjects(p);
-    // Click first project
     await p.evaluate(() => { document.querySelector(".project-item")?.click(); });
     await sleep(900);
-    // Click first session item
     await p.evaluate(() => { document.querySelector(".session-item")?.click(); });
-    await sleep(1500); // wait for xterm to initialize
+    await sleep(4000); // wait for xterm + Claude statusline to render
     await mockProjects(p);
   });
+  await page.setViewport(VIEWPORT); // restore for other shots
 
   // ── 2. History viewer — open session content ───────────────
   await shot(page, "history.png", async (p) => {
