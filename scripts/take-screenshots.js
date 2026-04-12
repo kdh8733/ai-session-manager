@@ -23,6 +23,34 @@ async function shot(page, filename, fn) {
   console.log(`✓ ${filename}`);
 }
 
+// Replace sidebar project names with clean example names
+async function mockProjects(page) {
+  await page.evaluate(() => {
+    const fakeProjects = [
+      { name: "ai-session-manager", branch: "main", dirty: true },
+      { name: "aws-terraform",      branch: "main", dirty: false },
+      { name: "data-dashboard",     branch: "dev",  dirty: true },
+    ];
+    const items = Array.from(document.querySelectorAll(".project-item"));
+    items.forEach((el, i) => {
+      const fake = fakeProjects[i];
+      if (!fake) { el.remove(); return; }
+      el.querySelector(".project-name").textContent = fake.name;
+      let gitSpan = el.querySelector(".project-git");
+      if (fake.branch) {
+        if (!gitSpan) {
+          gitSpan = document.createElement("span");
+          el.appendChild(gitSpan);
+        }
+        gitSpan.className = "project-git" + (fake.dirty ? " dirty" : "");
+        gitSpan.textContent = fake.branch + (fake.dirty ? "*" : "");
+      } else if (gitSpan) {
+        gitSpan.remove();
+      }
+    });
+  });
+}
+
 async function clickNav(page, text) {
   await page.evaluate((t) => {
     const btn = Array.from(document.querySelectorAll("button.nav-item")).find(
@@ -47,7 +75,7 @@ async function clickNav(page, text) {
   await shot(page, "dashboard.png", async (p) => {
     await p.goto(BASE_URL, base);
     await sleep(600);
-    // Click first project to expand
+    await mockProjects(p);
     await p.evaluate(() => {
       const item = document.querySelector(".project-item");
       if (item) item.click();
@@ -60,7 +88,7 @@ async function clickNav(page, text) {
     await p.goto(BASE_URL, base);
     await sleep(600);
     await clickNav(p, "히스토리");
-    // Click first history session card to load conversation
+    await mockProjects(p);
     await p.evaluate(() => {
       const card = document.querySelector(".history-session");
       if (card) card.click();
@@ -73,17 +101,39 @@ async function clickNav(page, text) {
     await p.goto(BASE_URL, base);
     await sleep(600);
     await clickNav(p, "비용");
-    await sleep(1200); // wait for charts to render
+    await mockProjects(p);
+    await sleep(1200);
   });
 
   // ── 4. Command Palette (Ctrl+K) ────────────────────────────
   await shot(page, "palette.png", async (p) => {
     await p.goto(BASE_URL, base);
     await sleep(600);
+    await mockProjects(p);
     await p.keyboard.down("Control");
     await p.keyboard.press("k");
     await p.keyboard.up("Control");
     await sleep(600);
+    // Mock palette items (populated from API state)
+    await p.evaluate(() => {
+      const fakeItems = [
+        { type: "project", name: "ai-session-manager", path: "~/workspace/ai-session-manager", selected: true },
+        { type: "project", name: "aws-terraform",      path: "~/workspace/aws-terraform",      selected: false },
+        { type: "project", name: "data-dashboard",     path: "~/workspace/data-dashboard",     selected: false },
+        { type: "history", name: "Fix deployment pipeline issue", path: "~/workspace/aws-terraform",      selected: false },
+        { type: "history", name: "Add cost dashboard charts",     path: "~/workspace/ai-session-manager", selected: false },
+      ];
+      const ul = document.querySelector(".cmd-palette-inner ul");
+      if (!ul) return;
+      ul.innerHTML = fakeItems.map(item => `
+        <li class="${item.selected ? 'selected' : ''}">
+          <span class="cmd-type">${item.type}</span>
+          <span>${item.name}</span>
+          <span style="font-size:11px;color:var(--text-dim);margin-left:auto">${item.path}</span>
+        </li>
+      `).join('');
+    });
+    await sleep(200);
   });
 
   await browser.close();
