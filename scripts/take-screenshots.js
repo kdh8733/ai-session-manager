@@ -71,16 +71,29 @@ async function clickNav(page, text) {
   await page.setViewport(VIEWPORT);
   const base = { waitUntil: "networkidle2", timeout: 15000 };
 
-  // ── 1. Dashboard — expand first project ───────────────────
+  // ── 1. Dashboard — expand first project + show session ────
   await shot(page, "dashboard.png", async (p) => {
     await p.goto(BASE_URL, base);
-    await sleep(600);
-    await mockProjects(p);
-    await p.evaluate(() => {
-      const item = document.querySelector(".project-item");
-      if (item) item.click();
-    });
     await sleep(800);
+    await mockProjects(p);
+    // Click first project to load its sessions
+    await p.evaluate(() => { document.querySelector(".project-item")?.click(); });
+    await sleep(900);
+    await mockProjects(p);
+  });
+
+  // ── 1b. Terminal — click session to open terminal tab ──────
+  await shot(page, "terminal.png", async (p) => {
+    await p.goto(BASE_URL, base);
+    await sleep(800);
+    await mockProjects(p);
+    // Click first project
+    await p.evaluate(() => { document.querySelector(".project-item")?.click(); });
+    await sleep(900);
+    // Click first session item
+    await p.evaluate(() => { document.querySelector(".session-item")?.click(); });
+    await sleep(1500); // wait for xterm to initialize
+    await mockProjects(p);
   });
 
   // ── 2. History viewer — open session content ───────────────

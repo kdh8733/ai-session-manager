@@ -18,7 +18,7 @@ import threading
 import time
 from pathlib import Path
 
-from backend.core import session_state
+from backend.core import session_state, session_store
 from backend.utils.platform import config_dir, claude_data_dir, tmux_run, claude_bin_path, normalize_path
 
 SESSION_PREFIX = "cm-"
@@ -159,6 +159,9 @@ def create_session(
 
     session_state.set(session_id, "running")
 
+    # Persist metadata so we can resume after reboot
+    session_store.save(session_id, project_dir, display_name or session_id)
+
     # Bind JSONL asynchronously
     threading.Thread(
         target=_bind_jsonl,
@@ -181,6 +184,7 @@ def kill_session(cfg: dict, session_id: str) -> None:
     """Kill a tmux session."""
     _tmux("kill-session", "-t", session_id, check=False)
     session_state.remove(session_id)
+    session_store.remove(session_id)
 
 
 def restart_claude(cfg: dict, session_id: str) -> None:
@@ -261,6 +265,63 @@ def cleanup_orphan_attaches() -> None:
         pass
 
 
+def auto_resume(cfg: dict) -> list[str]:
+    """Recreate tmux sessions for any persisted sessions lost after reboot.
+
+    For each session in session_store that no longer exists in tmux,
+    creates a new tmux session and runs `claude --resume <jsonl_id>` inside it.
+    Returns list of resumed session IDs.
+    """
+    # Collect currently alive tmux sessions
+    existing: set[str] = set()
+    try:
+        r = _tmux("list-sessions", "-F", "#{session_name}", check=False)
+        if r.returncode == 0:
+            existing = set(r.stdout.strip().splitlines())
+    except Exception:
+        pass
+
+    resumed = []
+    claude = claude_bin_path(cfg)
+
+    for meta in session_store.all_sessions():
+        session_id = meta["id"]
+        if session_id in existing:
+            continue  # still alive in tmux
+
+        jsonl_id = meta.get("jsonl_id", "")
+        if not jsonl_id:
+            continue  # nothing to resume without a conversation ID
+
+        project_dir = meta.get("project_dir", "")
+        display_name = meta.get("display_name", session_id)
+        cwd = project_dir if project_dir and Path(project_dir).is_dir() else str(Path.home())
+
+        try:
+            # Recreate the tmux session
+            _tmux(
+                "new-session", "-d",
+                "-s", session_id,
+                "-x", "220", "-y", "50",
+                "-c", cwd,
+                check=False,
+            )
+            _tmux_set_option(session_id, "@display_name", display_name)
+            _tmux_set_option(session_id, "@project_dir", project_dir)
+            _tmux_set_option(session_id, "@jsonl_id", jsonl_id)
+
+            # Resume the Claude conversation
+            cmd = f"{shlex.quote(claude)} --resume {shlex.quote(jsonl_id)}"
+            _tmux("send-keys", "-t", session_id, cmd, "Enter", check=False)
+            session_state.set(session_id, "running")
+            resumed.append(session_id)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("auto_resume failed for %s: %s", session_id, e)
+
+    return resumed
+
+
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
@@ -298,6 +359,7 @@ def _bind_jsonl(cfg: dict, session_id: str, project_dir: str, timeout: int = 30)
                 cwd = _read_cwd_from_jsonl(jsonl_file)
                 if cwd and _paths_match(cwd, project_dir):
                     _tmux_set_option(session_id, "@jsonl_id", jsonl_file.stem)
+                    session_store.update_jsonl_id(session_id, jsonl_file.stem)
                     return
             except OSError:
                 pass

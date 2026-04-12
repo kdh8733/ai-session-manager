@@ -12,6 +12,7 @@ from backend.core.tmux_session import (
     get_session,
     rename_session,
     cleanup_orphan_attaches,
+    auto_resume,
 )
 
 __all__ = [
@@ -23,4 +24,5 @@ __all__ = [
     "get_session",
     "rename_session",
     "cleanup_orphan_attaches",
+    "auto_resume",
 ]

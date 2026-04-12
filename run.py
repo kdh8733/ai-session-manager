@@ -28,6 +28,11 @@ def main():
     logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
     session_manager.cleanup_orphan_attaches()
+    resumed = session_manager.auto_resume(cfg)
+    if resumed:
+        logging.getLogger(__name__).info(
+            "Auto-resumed %d session(s) after reboot: %s", len(resumed), ", ".join(resumed)
+        )
     app.run(host=host, port=port, debug=args.debug, threaded=True)
 
 
