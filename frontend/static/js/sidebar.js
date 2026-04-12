@@ -10,11 +10,11 @@ const Sidebar = (() => {
   let _ctxProject = null;
   let _ctxSession = null;
 
-  // Session color palette — distinct, readable colors
+  // Session color palette — blue spectrum
   const SESSION_COLORS = [
-    '#f38ba8', '#fab387', '#f9e2af', '#a6e3a1', '#94e2d5',
-    '#89dceb', '#89b4fa', '#b4befe', '#cba6f7', '#f5c2e7',
-    '#eba0ac', '#f2cdcd', '#74c7ec', '#a6adc8', '#f5e0dc',
+    '#60a5fa', '#3b82f6', '#93c5fd', '#2563eb',
+    '#38bdf8', '#0ea5e9', '#7dd3fc', '#1d4ed8',
+    '#06b6d4', '#67e8f9', '#1e40af', '#bfdbfe',
   ];
 
   // Persistent color map: session_id → color

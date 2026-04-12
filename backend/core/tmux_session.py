@@ -10,6 +10,7 @@ The PTY bridge attaches to tmux sessions via ptyprocess.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import shlex
@@ -17,6 +18,8 @@ import subprocess
 import threading
 import time
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 from backend.core import session_state, session_store
 from backend.utils.platform import config_dir, claude_data_dir, tmux_run, claude_bin_path, normalize_path
@@ -316,8 +319,8 @@ def auto_resume(cfg: dict) -> list[str]:
             session_state.set(session_id, "running")
             resumed.append(session_id)
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning("auto_resume failed for %s: %s", session_id, e)
+            log.warning("auto_resume failed for %s: %s", session_id, e)
+            _tmux("kill-session", "-t", session_id, check=False)
 
     return resumed
 

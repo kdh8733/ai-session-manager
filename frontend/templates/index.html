@@ -12,6 +12,12 @@
   <!-- highlight.js (code) -->
 
   <link rel="stylesheet" href="/static/css/main.css" />
+  <script>
+    (function() {
+      var t = localStorage.getItem('cm-theme');
+      if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    })();
+  </script>
 </head>
 <body>
 
@@ -56,6 +62,7 @@
       <span class="logo">⚡ CM</span>
       <button id="btn-add-project" class="btn-icon" title="프로젝트 추가">＋</button>
       <button id="btn-cmd-palette" class="btn-icon" title="Ctrl+K">⌘</button>
+      <button id="btn-theme-toggle" class="btn-icon" title="다크/라이트 모드 전환">🌙</button>
     </div>
 
     <!-- Project tree -->
@@ -287,5 +294,26 @@
 <script src="/static/js/settings.js"></script>
 <script src="/static/js/palette.js"></script>
 <script src="/static/js/app.js"></script>
+<script>
+(function() {
+  var btn = document.getElementById('btn-theme-toggle');
+  var theme = localStorage.getItem('cm-theme') || 'dark';
+  function apply(t) {
+    if (t === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+      btn.textContent = '☀️';
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      btn.textContent = '🌙';
+    }
+  }
+  apply(theme);
+  btn.addEventListener('click', function() {
+    theme = theme === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('cm-theme', theme);
+    apply(theme);
+  });
+})();
+</script>
 </body>
 </html>
